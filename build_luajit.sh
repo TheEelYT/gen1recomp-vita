@@ -23,7 +23,7 @@ VITASDK="${VITASDK:-/c/vitasdk}"
 case "$VITASDK" in [A-Za-z]:*) VITASDK="/$(echo "${VITASDK%%:*}" | tr 'A-Z' 'a-z')${VITASDK#*:}";; esac
 export PATH="$VITASDK/bin:$PATH"
 CC=arm-vita-eabi-gcc
-VCVARS='C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsamd64_x86.bat'
+VCVARS='B:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsamd64_x86.bat'
 
 TARGET_FLAGS="-O2 -marm -march=armv7-a -mtune=cortex-a9 -mfpu=neon -mfloat-abi=hard -fno-optimize-sibling-calls -ffunction-sections -fdata-sections"
 

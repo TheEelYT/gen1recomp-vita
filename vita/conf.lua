@@ -243,7 +243,8 @@ if isVita then
     -- frame loop through FrameCap/PresentSync, which decides whether a frame
     -- is presented at all.
     --   POKEPORT_HANDHELD = "1",
-    --   POKEPORT_AUDIO_RATE = AUDIO_RATE ~= "" and AUDIO_RATE or nil,
+    POKEPORT_AUDIO_RATE = AUDIO_RATE ~= "" and AUDIO_RATE or nil,
+    POKEPORT_AUDIO_STATS = "1",
     -- No idle render governor here. The ARM handheld build drops to 6 fps
     -- after 10 s without input to save power, but menus and dialogue are
     -- exactly the static screens that triggers, and at 6 fps a button press
