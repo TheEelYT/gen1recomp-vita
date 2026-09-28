@@ -27,3 +27,5 @@ native/*.velf.tmp
 native/*.self
 native/eboot.bin
 native/vpk/
+
+baselines/
