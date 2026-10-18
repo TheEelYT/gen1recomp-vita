@@ -56,12 +56,12 @@ binding-offset workaround, including its required forward declaration.
 This environment has no VitaSDK or attached Vita. No new native binary or VPK
 has been compiled or tested on hardware. Rebuild LÖVE and package locally using
 `TOOLCHAIN.md`, then check boot, controller navigation, Gen 1/2 music at 22050 Hz,
-Gen 3 import, returning to the launcher and mod rendering.
+Gen 3 import, returning to the launcher and standard engine rendering.
 
-Keep the existing local Battle Art Sky/Water fallback files. They are external
-to these two repositories and were not available for this merge. Large voxel
-mesh splitting remains separate work; the native draw workaround alone did not
-resolve the previously observed missing geometry.
+Scope update: Battle Art and all other voxel mods have been dropped. Their
+Sky/Water fallbacks, voxel mesh splitting and cache work are no longer follow-up
+tasks or prerequisites for validating the Vita port. Previous voxel experiments
+remain historical notes. Native fixes useful to the base engine are retained.
 
 `baselines/` and downloaded/vendor trees remain ignored. Upstream remotes are
 fetch-only in the working checkouts; all branch updates target TheEelYT's forks.

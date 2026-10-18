@@ -80,5 +80,7 @@ validation and hardware checks still needed.
 
 Previous Vita hardware results do not validate this new engine merge. A fresh
 native compile and an on-device boot/import/playback check remain required.
-Local Battle Art Sky/Water shader edits are external to these two repositories;
-keep the existing copies on the Vita when updating.
+The port targets standard Gen1Recomp. Battle Art and all other voxel mods are
+out of scope; their shader edits, mesh workarounds and cache designs are no
+longer part of the build or hardware acceptance criteria. Older voxel probes
+and design notes are historical experiments, not planned features.

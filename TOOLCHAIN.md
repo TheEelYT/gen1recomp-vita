@@ -112,9 +112,8 @@ packer now enables by default. `LOVE_VITA_HEAP_MB=256` is not the saved setting.
 
 Rear touch is disabled before SDL initializes. Non-indexed native draws advance
 vertex binding offsets and use `first=0`; `advanceVertexOffsets` is declared
-before its first use. Existing indexed draw paths remain in place. This does
-not resolve the separate >65K-vertex voxel mesh issue; large voxel mods still
-need physically split meshes.
+before its first use. Existing indexed draw paths remain in place. Voxel mods are out of scope;
+mesh splitting and voxel-specific renderer work are no longer planned.
 
 After native source changes, rebuild and repackage; updating `game.love` alone
 cannot change `eboot.bin`:
