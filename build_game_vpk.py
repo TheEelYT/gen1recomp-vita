@@ -42,6 +42,8 @@ INCLUDE = [
     "tools/rom_manifest_yellow.json", "tools/rom_manifest_gold.json",
     "tools/rom_manifest_silver.json", "tools/rom_manifest_crystal.json",
     "tools/rom_manifest_firered.json", "tools/rom_manifest_leafgreen.json",
+    "tools/rom_manifest_emerald.json", "tools/rom_manifest_ruby.json",
+    "tools/rom_manifest_sapphire.json",
     "PATCH_NOTES.md",
     # Patch notes for the in-game updater, which reads it from the package
     # (src/update/PatchNotes.lua); pack_love.sh adds it when it exists.
@@ -58,8 +60,10 @@ REQUIRED = [
     "tools/rom_manifest_yellow.json", "tools/rom_manifest_gold.json",
     "tools/rom_manifest_silver.json", "tools/rom_manifest_crystal.json",
     "tools/rom_manifest_firered.json", "tools/rom_manifest_leafgreen.json",
+    "tools/rom_manifest_emerald.json", "tools/rom_manifest_ruby.json",
+    "tools/rom_manifest_sapphire.json",
 ]
-ROM_SUFFIXES = (".gb", ".gbc", ".sav")
+ROM_SUFFIXES = (".gb", ".gbc", ".gba", ".agb", ".sav")
 
 
 UTF8_ESCAPE = re.compile(r'(?<!\\)((?:\\\\)*)\\u\{([0-9A-Fa-f]{1,6})\}')
@@ -135,7 +139,7 @@ def _release_files(engine):
             for f in sorted(path.rglob("*")):
                 rel = f.relative_to(engine).as_posix()
                 if f.is_file() and not rel.startswith(EXCLUDE_PREFIXES) \
-                        and f.name != ".DS_Store":
+                        and f.name != ".DS_Store" and f.suffix.lower() != ".psd":
                     yield f, rel
 
 
@@ -193,14 +197,15 @@ def main():
     ap.add_argument("--engine", default="C:/g2dev", help="Gen1Recomp engine checkout")
     ap.add_argument("--audio-rate", default="22050",
                     help="music synth rate on the Vita; '' keeps the engine default (44100)")
-    ap.add_argument("--extended-memory", action="store_true",
+    ap.add_argument("--love-only", action="store_true",
+                    help="build and verify game.love without downloading or packaging a native runtime")
+    ap.add_argument("--extended-memory", action=argparse.BooleanOptionalAction, default=True,
                     help="set param.sfo ATTRIBUTE2=12 (the extended memory mode big Vita "
-                         "ports use). The runtime asks for a 200 MB heap; the default "
-                         "pool is smaller. Untested on hardware.")
+                         "ports use). The runtime asks for a 196 MB heap; the default "
+                         "pool is smaller. Enabled by default for the 196 MB heap.")
     ap.add_argument("--eboot", default=None,
-                    help="LÖVE runtime to package (default: isage's prebuilt 11.4-vita "
-                         "eboot, LuaJIT 2.0.5). Pass vendor/love-vita/love.self to use "
-                         "the locally built LuaJIT 2.1 runtime -- see TOOLCHAIN.md")
+                    help="patched LuaJIT 2.1 LÖVE runtime (default: vendor/love-vita/love.self); "
+                         "see TOOLCHAIN.md")
     ap.add_argument("--luajit", default=str(LUAJIT20),
                     help="LuaJIT 2.0 host binary for precompiling (see README)")
     ap.add_argument("--bytecode", action="store_true",
@@ -212,17 +217,22 @@ def main():
     engine = Path(args.engine)
     check_release_set(engine)
 
-    eboot = Path(args.eboot) if args.eboot else base.fetch("eboot.bin")
-    if not eboot.is_file():
-        raise SystemExit(f"no such runtime: {eboot}")
-    module_zips = {name: base.fetch(name) for name in base.MODULES}
+    # Current Gen 3 importers require LuaJIT 2.1. Never silently replace our
+    # patched runtime with the older upstream 2.0.5 eboot.
+    eboot = Path(args.eboot) if args.eboot else HERE / "vendor/love-vita/love.self"
+    if not args.love_only and not eboot.is_file():
+        raise SystemExit(f"no such patched runtime: {eboot} (see TOOLCHAIN.md)")
 
     compiled = precompile(engine, Path(args.luajit)) if args.bytecode else {}
     love_bytes, count = build_love(engine, args.audio_rate, compiled)
     base.BUILD.mkdir(parents=True, exist_ok=True)
     love_out = base.BUILD / "gen1recomp-vita.love"
     love_out.write_bytes(love_bytes)
+    if args.love_only:
+        print(f"engine {engine_commit(engine)}: {count} files; wrote {love_out}")
+        return
 
+    module_zips = {name: base.fetch(name) for name in base.MODULES}
     base.TITLE_ID, base.TITLE, base.STITLE = TITLE_ID, TITLE, STITLE
     if args.extended_memory:
         base.ATTRIBUTE2 = 12

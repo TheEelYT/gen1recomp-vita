@@ -1,24 +1,28 @@
 # Building a LÖVE runtime for the Vita (LuaJIT 2.1)
 
 isage's prebuilt `11.4-vita` eboot links **LuaJIT 2.0.5** (hyln9/vita-luajit).
-This rebuilds the same engine against **LuaJIT 2.1.0-beta3**, the version the
-Gen1Recomp engine (and desktop LÖVE 11.4) actually targets, which removes the
-`\u{}` rewrite and the bytecode-format split, and should be faster.
+This rebuilds the runtime against patched **LuaJIT 2.1.0-beta3**, which supports
+the Gen 3 importer syntax. The game payload uses source Lua by default.
 
-Everything below is already done on this machine; it is written down so the
-build can be reproduced or repaired.
+The current runtime uses **vitaGL + sdl2_vitagl**. Older PVR/gl4es build
+instructions are superseded. Keep existing local SDK libraries when updating
+the source branches; an engine update does not require replacing them.
 
-## Toolchain (once)
+## Toolchain
 
-| Piece | Where |
+| Piece | Configuration |
 |---|---|
-| VitaSDK (GCC 15.2.0, arm-vita-eabi) | `C:/vitasdk`, from `vitasdk/autobuilds` release `sdk-snapshot-20260914.739.1`, asset `vitasdk-x86_64-w64-mingw32-*.tar.bz2` (SHA-256 checked against `SHA256SUMS`) |
-| `vdpm` package manager | `vendor/vdpm/bin/vdpm.exe`, same release; `vdpm refresh 2026.08` selects the supported channel |
-| Vita libraries | `vdpm install luajit sdl2 freetype openal-soft libmodplug mpg123 libvorbis libogg libtheora zlib libpng physfs` (LuaJIT lands as 2.1.0-beta3) |
-| MSYS2 build tools | `pacman -S make autoconf automake libtool pkgconf patch` (LÖVE's build is autotools; Git Bash has no `make`) |
-| PowerVR driver headers + stubs | PVR_PSP2 v3.9 source `include/{EGL,GLES,GLES2,KHR,gpu_es4}` and `vitasdk_stubs.zip` -> `C:/vitasdk/arm-vita-eabi/{include,lib}` |
-| gl4es headers + stub | gl4es4vita `v1.1.4-vita` `include.zip` + `vitasdk_stubs.zip` -> same place |
-| SDL2 with the GL backend | SDL2 2.32.8 rebuilt with `-DVIDEO_VITA_PVR=ON` (the vdpm package is built **without** it, so it has no GL at all) and installed over the package |
+| VitaSDK | `C:/vitasdk`, GCC 15.2.0 / arm-vita-eabi |
+| MSYS2 | make, autoconf, automake, libtool, pkgconf, patch |
+| SDL2 | `sdl2_vitagl` (remove conflicting `sdl2` package) |
+| Renderer | `vitaGL`; the prior hardware test used `SAFE_DRAW=1 NO_SPLASHSCREEN=1` |
+| Audio/data libs | freetype, openal-soft, libmodplug, mpg123, libvorbis, libogg, libtheora, zlib, libpng, physfs |
+| LuaJIT | patched SonicMastr/LuaJIT-Vita `v2.1` at `c329ddd10691c1875f26087ba23c2ae278515e24` |
+| LÖVE | isage/love at `6633ca5ba9294cd735c62ca519a9ea3a9870e0bb` plus `patches/love-vita-psp2.patch` |
+
+Apply native patches only to clean source. For existing patched checkouts,
+inspect `git diff` before updating; never reset away local native changes.
+`baselines/` stays local and ignored.
 
 ### Gotchas hit here
 
@@ -65,15 +69,18 @@ His Vita ports (DaedalusX64-vitaGL, lpp-vita) build with:
 
 and set `ATTRIBUTE2=12` in `param.sfo` (`VITA_MKSFOEX_FLAGS "-d ATTRIBUTE2=12"`),
 which asks for the extended memory mode -- relevant here because the runtime
-requests a 200 MB newlib heap. `build_game_vpk.py --extended-memory` does the
+requests a 196 MB newlib heap. `build_game_vpk.py --extended-memory` does the
 same. He also uses `-ffast-math`, which is deliberately **not** copied: it
 changes float semantics across a whole game engine for unclear gain.
 
 ## Build
 
 ```sh
-git clone --depth 1 https://github.com/isage/love vendor/love-vita
-cd vendor/love-vita && platform/vita/automagic          # under MSYS2 bash
+git clone https://github.com/isage/love vendor/love-vita
+cd vendor/love-vita
+git checkout 6633ca5ba9294cd735c62ca519a9ea3a9870e0bb
+git apply ../../patches/love-vita-psp2.patch
+platform/vita/automagic          # under MSYS2 bash
 FLAGS='-O2 -g0 -march=armv7-a -mtune=cortex-a9 -mfpu=neon -mfloat-abi=hard
        -fno-optimize-sibling-calls -ffunction-sections -fdata-sections'
 ./configure --host=arm-vita-eabi --prefix=$VITASDK/arm-vita-eabi/ \
@@ -96,3 +103,26 @@ made every pthread symbol a duplicate definition).
 
 The resulting `love.self` replaces `eboot.bin` in the VPK
 (`build_game_vpk.py --eboot <path>`).
+
+## Runtime settings in the saved patch
+
+`LOVE_VITA_HEAP_MB` defaults to 196 (overridable at compile time); the JIT pool
+remains 4 MB and libc heap 16 MB. Package with extended memory, which the game
+packer now enables by default. `LOVE_VITA_HEAP_MB=256` is not the saved setting.
+
+Rear touch is disabled before SDL initializes. Non-indexed native draws advance
+vertex binding offsets and use `first=0`; `advanceVertexOffsets` is declared
+before its first use. Existing indexed draw paths remain in place. This does
+not resolve the separate >65K-vertex voxel mesh issue; large voxel mods still
+need physically split meshes.
+
+After native source changes, rebuild and repackage; updating `game.love` alone
+cannot change `eboot.bin`:
+
+```sh
+make -j12
+vita-elf-create -s ./src/love ./love.velf
+vita-make-fself ./love.velf ./love.self
+cd ../..
+python build_game_vpk.py --engine B:/gen1recomp --eboot vendor/love-vita/love.self
+```

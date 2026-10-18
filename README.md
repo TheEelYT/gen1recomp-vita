@@ -15,74 +15,47 @@ route to an official Vita build.
 
 ## Build
 
+Use Python 3.9+ with Pillow and the patched LuaJIT 2.1 runtime described in
+`TOOLCHAIN.md`. From the Windows checkouts:
+
+```powershell
+cd B:\gen1recomp-vita
+python build_game_vpk.py --engine B:/gen1recomp --eboot vendor/love-vita/love.self
 ```
-python build_game_vpk.py --engine C:/g2dev --eboot vendor/love-vita/love.self
-python build_vpk.py --engine C:/g2dev          # the probe -> build/gen1recomp-vita-probe.vpk
+
+This produces `build/gen1recomp-vita.vpk`. Extended memory (`ATTRIBUTE2=12`)
+is enabled by default for the 196 MB runtime heap. The default runtime path
+is `vendor/love-vita/love.self`; a missing runtime fails the build instead of
+silently downloading the old LuaJIT 2.0.5 executable. The game uses 22050 Hz
+audio. `--audio-rate ''` keeps the engine's default rate.
+
+To verify the Lua payload without VitaSDK, a native runtime, or driver downloads:
+
+```powershell
+python build_game_vpk.py --engine B:/gen1recomp --love-only
 ```
 
-`--eboot` is not optional for a build meant to run: the default is isage's
-prebuilt eboot (LuaJIT 2.0.5), while everything `vita/conf.lua` relies on --
-the executable mcode pool, the enum-width fix, `POKEPORT_VITA_JIT` -- lives in
-the runtime built here. See "Building a LuaJIT 2.1 runtime" below.
+`INCLUDE` is checked against the engine's `scripts/pack_love.sh` on every build.
+The payload includes all eleven ROM manifests, including Emerald, Ruby and
+Sapphire. Generated ROM data, game dumps, saves and PSD source artwork are
+excluded. Source Lua is the default; leave `--bytecode` off because its legacy
+LuaJIT 2.0 compiler path does not match this runtime.
 
-`INCLUDE` in `build_game_vpk.py` is a hand-copy of the file set in the
-engine's `scripts/pack_love.sh`, and `check_release_set()` compares the two on
-every build. If it stops the build, the engine added a file: add it to
-`INCLUDE`, and to `REQUIRED` if `pack_love.sh` asserts it.
+## Vita settings retained
 
-The eboot and the GPU driver modules are downloaded into `vendor/` and checked
-against pinned SHA-256s. `game.love` contains the desktop release's file set
-(`scripts/pack_love.sh`) plus the `vita/conf.lua` shim, which only activates on
-the Vita runtime and sets LÖVE 11.4, a fixed 960x544 window, and the engine's
-own handheld profile: `POKEPORT_HANDHELD` (pad-driven launcher, in-game ROM
-browser, on-screen keyboard, handheld frame pacing), 22050 Hz music
-(`--audio-rate ''` keeps 44100), the idle render governor (6 fps after 10 s
-idle) and no Discord presence. Same knobs `build-linux-arm-sbc.sh` exports
-for the ARM handheld build. No ROM or ROM-derived data is packaged.
+- Fixed 960x544 window and 22050 Hz chip audio.
+- Main-state JIT disabled by default, with the existing opt-in mod API.
+- Native pad navigation, virtual filesystem ROM browser, and return to the
+  launcher inside the running process.
+- Sequential Gen 3 import, compact map cells and script windows, lazy FRLG
+  tilesets, and separate encoding of atlas layers to limit peak memory.
+- Low-memory import GC without enabling handheld frame pacing or the idle
+  render governor. Discord presence remains disabled.
+- Native vitaGL shader/uniform workarounds, first-vertex offset workaround,
+  disabled rear touch, executable JIT pool and host/target layout verification.
 
-Measured at those settings (desktop, `low` tier): the base game submits ~25
-draws + ~15 sprite batches, 4 canvas and 4 shader switches per frame, and
-renders into a 320x182 canvas, not the full 960x544 -- so neither draw-call
-count nor fill rate should bind on the Vita. Lua CPU is under 1 ms/frame
-even with the JIT off, so the base game's frame cost is not Lua-bound
-either. The audio synth and startup parsing are the two real CPU costs.
-
-### LuaJIT 2.0 (the Vita runtime is 2.0.5, desktop LÖVE is 2.1)
-
-- `\u{XXXX}` string escapes are 2.1-only. The build rewrites them to the same
-  UTF-8 bytes (`build/lua20/`); today that is one line in
-  `src/ui/gen2/BattleState.lua`, which otherwise fails to load on the Vita
-  and takes every Gen 2 battle down with it.
-- **`goto` is 2.1-only too, and nothing rewrites it.** As of engine v0.3.14
-  the Gen 3 importer uses it (`src/import/gba/map_tree.lua`,
-  `door_anim_extract.lua`, `extract_map_events.lua`, `extract_scripts.lua`,
-  `battle_anim_extract.lua`). Those modules are only `require`d while
-  importing a GBA ROM, so Gen 1 and Gen 2 are unaffected, but on isage's
-  2.0.5 eboot a FireRed/LeafGreen import fails at parse time. The runtime
-  this port actually ships (`vendor/love-vita/love.self`, LuaJIT 2.1) has
-  no such limit -- this only bites a build made with the default `--eboot`.
-- `--bytecode` ships precompiled chunks instead of source, which skips
-  parsing ~11 MB at startup (141 ms -> 14 ms on a desktop, tens of times
-  more on the Vita's CPU). **Off by default**: loading bytecode while the
-  collector runs crashes LuaJIT intermittently on the desktop -- source +
-  GC survived 4/4 runs, bytecode + GC crashed 3/4 under 2.0 and 1/4 under
-  2.1, so it is an upstream bug, not a 2.0 one. The probe VPK carries 80
-  real engine chunks and loads them with the GC stepping; if that section
-  finishes on hardware, this flag is safe to use.
-  Needs a LuaJIT 2.0 host: `vendor/luajit-2.0-src/.../src/msvcbuild.bat
-  static` from a VS x64 prompt (LuaJIT `v2.0` branch @ 3000f7c; dump format
-  1, same as 2.0.5). Desktop LÖVE (2.1) cannot load those chunks, so test
-  desktop builds without the flag.
-
-### Building a LuaJIT 2.1 runtime
-
-isage's prebuilt eboot links LuaJIT **2.0.5**. `TOOLCHAIN.md` documents the
-VitaSDK setup here and rebuilds the same LÖVE against LuaJIT **2.1.0-beta3**
-(what the engine and desktop LÖVE 11.4 target), then:
-
-```
-python build_game_vpk.py --engine C:/g2dev --eboot vendor/love-vita/love.self
-```
+The optional `build_vpk.py` probe still targets the older upstream runtime;
+use `build_game_vpk.py` for the game.
 
 ## Install
 
@@ -91,7 +64,7 @@ python build_game_vpk.py --engine C:/g2dev --eboot vendor/love-vita/love.self
    CPU / 222 MHz GPU. The eboot never raises the clocks itself, and apps
    otherwise run at the 333 MHz default.
 2. Install `gen1recomp-vita.vpk` with VitaShell.
-3. Copy your own `.gb`/`.gbc` dump to `ux0:data/love2d/love/pokemon-love2d/`
+3. Copy your own `.gb`/`.gbc`/`.gba` dump to `ux0:data/love2d/love/pokemon-love2d/`
    (create the folder if the game has not been launched yet).
 4. Launch Gen1Recomp and press Choose on the cart: the file picker is
    unavailable on the Vita, so the importer falls back to that folder.
@@ -100,10 +73,12 @@ Crash logs: `ux0:data/SDL_Log.txt`.
 
 ## Status
 
-- Verified on desktop LÖVE 11.4 in OpenGL ES mode with the shim forced on
-  (`VITA_SHIM_FORCE=1`): boots, imports, reaches the overworld; all 11 engine
-  shaders compile as GLSL ES 1.00.
-- Vita3K cannot run it: the PowerVR driver (`libgpu_es4_ext.suprx`) needs
-  kernel functions the emulator does not implement.
-- Not yet run on real hardware. Run the probe VPK first; it reports whether
-  the GPU driver works, whether the JIT is on, and frame times.
+The October 18 update integrates upstream engine `041e0558` (v0.3.90 code)
+and retains this fork's Vita changes. The runtime fork already contains
+Code-Grub's latest `b1d1932`. See `docs/upstream-sync-2026-10-18.md` for the
+validation and hardware checks still needed.
+
+Previous Vita hardware results do not validate this new engine merge. A fresh
+native compile and an on-device boot/import/playback check remain required.
+Local Battle Art Sky/Water shader edits are external to these two repositories;
+keep the existing copies on the Vita when updating.

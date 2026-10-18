@@ -56,16 +56,18 @@ anything reaches a console.
 
 ## `love-vita-psp2.patch`
 
-Applies to the `love-vita` checkout in `vendor/` (a git tree, so
+Applies to isage/love commit `6633ca5ba9294cd735c62ca519a9ea3a9870e0bb`
+in `vendor/love-vita` (a git tree, so
 `git apply` works and `git apply --reverse --check` confirms a match).
 
 ```sh
 cd vendor/love-vita && git apply ../../patches/love-vita-psp2.patch
 ```
 
-Five files:
+Six files:
 
-- **`love.cpp`** — replaces libc's `sbrk.o` wholesale (all four symbols, or the
+- **`love.cpp`** — retains the 196 MB heap and disables rear touch before SDL
+  initialization; replaces libc's `sbrk.o` wholesale (all four symbols, or the
   linker pulls the original back for the ones left out) so the LuaJIT code pool
   is reserved *before* `_init_vita_heap` creates the heap; that is what puts it
   inside branch range. Also opens the VM domain once for good, a mutex for the
@@ -80,6 +82,9 @@ Five files:
   reports "OpenGL ES 2.0"), log SDL's failures, and write the real window and
   drawable sizes to `ux0:data/g1r-screen.txt`. That report is what found the
   window sitting at 1024x768 on a 960x544 panel.
+- **`modules/graphics/opengl/Graphics.cpp`** — advances vertex-buffer offsets
+  for non-indexed draws on Vita and passes `first=0` to vitaGL. Includes the
+  forward declaration needed before `Graphics::draw`.
 - **`modules/graphics/opengl/OpenGL.cpp`** — assume highp in fragment shaders.
   vitaGL has no `glGetShaderPrecisionFormat`, and a null check is not enough
   because the missing symbol resolves to a non-null address.
