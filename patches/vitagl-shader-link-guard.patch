@@ -1,0 +1,71 @@
+diff --git a/source/custom_shaders.c b/source/custom_shaders.c
+index 1d410cb..62cf8a9 100644
+--- a/source/custom_shaders.c
++++ b/source/custom_shaders.c
+@@ -1730,8 +1730,19 @@ void _vglDrawObjects_CustomShadersIMPL() {
+ }
+ #endif
+ 
++#if defined(HAVE_SHARK_LOG) || defined(LOG_ERRORS)
++static void g1r_shader_diagnostic(const char *msg, shark_log_level level, int line) {
++	FILE *file = fopen("ux0:data/g1r-shaders.txt", "a");
++	if (file) {
++		fprintf(file, "level=%d line=%d %s\n", (int)level, line, msg);
++		fclose(file);
++	}
++}
++#endif
++
+ #ifdef HAVE_SHARK_LOG
+ void shark_log_cb(const char *msg, shark_log_level msg_level, int line) {
++	g1r_shader_diagnostic(msg, msg_level, line);
+ 	char newline[1024];
+ 	GLboolean is_extra_line = shark_log ? GL_TRUE : GL_FALSE;
+ 	switch (msg_level) {
+@@ -1763,6 +1774,7 @@ void shark_log_cb(const char *msg, shark_log_level msg_level, int line) {
+ }
+ #elif defined(LOG_ERRORS)
+ void shark_log_cb(const char *msg, shark_log_level msg_level, int line) {
++	g1r_shader_diagnostic(msg, msg_level, line);
+ 	switch (msg_level) {
+ 	case SHARK_LOG_INFO:
+ 		vgl_log("Shader Compiler: I] %s on line %d.\n", msg, line);
+@@ -2452,6 +2464,38 @@ void glLinkProgram(GLuint progr) {
+ 		glsl_sema_mode = VGL_MODE_POSTPONED;
+ 	}
+ 
++	// G1R_LINK_GUARD_BEGIN: deferred GLSL compilation can fail during linking.
++	// Leave link status false so callers can report/fall back without sending
++	// a NULL program to sceGxmProgramGetParameterCount below.
++	if (!p->vshader || !p->fshader || !p->vshader->prog || !p->fshader->prog) {
++		p->status = PROG_UNLINKED;
++#ifdef LOG_ERRORS
++		vgl_log("G1R: program %u link aborted: vertex=%s fragment=%s. See Shader Compiler messages above.\n",
++			progr, (p->vshader && p->vshader->prog) ? "ready" : "failed",
++			(p->fshader && p->fshader->prog) ? "ready" : "failed");
++#endif
++#if defined(HAVE_SHARK_LOG) || defined(LOG_ERRORS)
++		char detail[160];
++		snprintf(detail, sizeof(detail), "program=%u link aborted vertex=%s fragment=%s",
++			progr, (p->vshader && p->vshader->prog) ? "ready" : "failed",
++			(p->fshader && p->fshader->prog) ? "ready" : "failed");
++		g1r_shader_diagnostic(detail, SHARK_LOG_ERROR, 0);
++		shader *failed[2] = { p->vshader, p->fshader };
++		const char *paths[2] = { "ux0:data/g1r-shader-failed-vertex.cg", "ux0:data/g1r-shader-failed-fragment.cg" };
++		for (int stage = 0; stage < 2; stage++) {
++			if (failed[stage] && !failed[stage]->prog && failed[stage]->source) {
++				FILE *file = fopen(paths[stage], "w");
++				if (file) {
++					fputs(failed[stage]->source, file);
++					fclose(file);
++				}
++			}
++		}
++#endif
++		return;
++	}
++	// G1R_LINK_GUARD_END
++
+ 	if (p->status == PROG_LINKED) {
+ 		vgl_log("%s:%d: %s: A program has been re-linked. vitaGL doesn't support re-linking, glitches may happen.\n", __FILE__, __LINE__, __func__);
+ 		return;

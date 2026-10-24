@@ -104,6 +104,10 @@ made every pthread symbol a duplicate definition).
 The resulting `love.self` replaces `eboot.bin` in the VPK
 (`build_game_vpk.py --eboot <path>`).
 
+For the Emerald world-entry shader crash after engine `e3b3d5aa`, use the
+[incremental shader guard and logging rebuild](docs/shader-link-diagnostics.md).
+It reuses the existing configured runtime and preserves local native fixes.
+
 ## Runtime settings in the saved patch
 
 `LOVE_VITA_HEAP_MB` defaults to 196 (overridable at compile time); the JIT pool

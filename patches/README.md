@@ -5,7 +5,16 @@ the trees they apply to are under `vendor/`, which `.gitignore` excludes (about
 a gigabyte of toolchain, GPU blobs and a ROM). Without these files the port is
 not reproducible from a fresh clone.
 
-Both were checked with `--dry-run` against pristine sources.
+The LuaJIT and LOVE patches were checked with `--dry-run` against pristine sources.
+
+## `vitagl-shader-link-guard.patch`
+
+An incremental guard for vitaGL's deferred shader compilation. Failed stage
+compilation must leave link status false instead of passing a null program to
+SceGxm. It also captures compiler errors and failed source when logging is
+enabled. See [the rebuild instructions](../docs/shader-link-diagnostics.md).
+Apply this to the existing vitaGL source, preserving local changes; do not
+reapply the full LOVE or LuaJIT patches to a previously patched runtime.
 
 ## `luajit-vita-psp2.patch`
 
