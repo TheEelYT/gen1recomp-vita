@@ -1,0 +1,48 @@
+diff --git a/src/love.cpp b/src/love.cpp
+--- a/src/love.cpp
++++ b/src/love.cpp
+@@ -21,6 +21,11 @@
+ #include "common/version.h"
+ #include "common/runtime.h"
+ #include "modules/love/love.h"
+ #include <SDL.h>
+ 
++#ifdef __vita__
++#include <psp2/kernel/processmgr.h>
++#include <vitaGL.h>
++#endif
++
+ #ifdef LOVE_BUILD_EXE
+@@ -286,6 +291,32 @@
+ 	if (lua_isnumber(L, -1))
+ 		retval = (int) lua_tonumber(L, -1);
+ 
++#ifdef __vita__
++	// G1R_PROCESS_EXIT_BEGIN
++	// G1R sets this only after a real app quit and its worker shutdown hooks.
++	// Font atlas deletion currently faults inside the Vita graphics allocator,
++	// including during explicit Window.close. Let the OS reclaim the process
++	// allocations after finishing GPU work, without traversing those finalizers.
++	// This is an exit workaround, not a fix for the invalid free's origin.
++	lua_getglobal(L, "G1R_VITA_SHUTDOWN_READY");
++	bool g1r_shutdown_ready = lua_toboolean(L, -1);
++	lua_pop(L, 1);
++	if (done == DONE_QUIT && g1r_shutdown_ready)
++	{
++		FILE *shutdown_log = fopen("ux0:data/g1r-shutdown.txt", "a");
++		if (shutdown_log) { fputs("native GPU finish begin\n", shutdown_log); fflush(shutdown_log); }
++		glFinish();
++		if (shutdown_log)
++		{
++			fputs("native GPU finish complete; exiting process\n", shutdown_log);
++			fclose(shutdown_log);
++		}
++		fflush(NULL);
++		sceKernelExitProcess(retval);
++	}
++	// G1R_PROCESS_EXIT_END
++#endif
++
+ 	lua_close(L);
+ 
+ #if (defined(LOVE_LEGENDARY_APP_ARGV_HACK) || defined(__vita__)) && !defined(LOVE_IOS)

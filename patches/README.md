@@ -16,6 +16,14 @@ enabled. See [the rebuild instructions](../docs/shader-link-diagnostics.md).
 Apply this to the existing vitaGL source, preserving local changes; do not
 reapply the full LOVE or LuaJIT patches to a previously patched runtime.
 
+## `love-vita-process-exit.patch`
+
+An incremental application-close workaround for the font-atlas allocator fault.
+After G1R completes its shutdown hooks, native main finishes GPU work and exits
+the process without running the crashing graphics finalizers. This does not
+repair the underlying invalid free. See [the evidence and rebuild steps](../docs/process-exit.md).
+The existing rebuild helper applies both incremental patches.
+
 ## `luajit-vita-psp2.patch`
 
 Applies to **SonicMastr/LuaJIT-Vita branch `v2.1`**, commit

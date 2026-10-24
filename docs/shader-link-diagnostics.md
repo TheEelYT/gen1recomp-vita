@@ -67,3 +67,7 @@ on `trace`. No Emerald re-import is needed. Copy `g1r-shaders.txt`, any
 Host checks exercise the guard's C control flow with absent and failed stages,
 logging enabled/disabled and failed-source capture. They do not compile the
 complete native library or test Vita execution; VitaSDK is unavailable here.
+
+The current helper also applies the [application-close workaround](process-exit.md)
+and keeps a new backup under `baselines/before-process-exit/`. Follow that page
+for the latest close-test instructions. The original shader guard remains applied.
