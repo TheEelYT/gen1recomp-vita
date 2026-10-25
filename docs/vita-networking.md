@@ -12,6 +12,10 @@ and used save sync with engine `01970377` and packager `1e72d30`. This establish
 that the native HTTPS build works for both flows on the Vita. Interrupted
 transfers and Wi-Fi reconnect behavior still need separate device checks.
 
+The subsequent large HnS cart download passed its hash gate but failed during
+asset extraction. See [the cooperative installer update](vita-mod-install.md)
+for the separate install-memory/progress candidate and retry instructions.
+
 ## Update and build
 
 In PowerShell, fast-forward the standard checkouts:
