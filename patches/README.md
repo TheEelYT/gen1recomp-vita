@@ -7,6 +7,14 @@ not reproducible from a fresh clone.
 
 The LuaJIT and LOVE patches were checked with `--dry-run` against pristine sources.
 
+## `love-vita-http.patch`
+
+Adds the Vita-only system HTTP registrations and per-state bridge marker.
+`scripts/rebuild_network.sh` applies this incremental patch, copies
+`native/vita_http_bridge.h` next to the wrapper, and adds installed libcurl
+flags without reconfiguring the runtime. See [networking build and validation](../docs/vita-networking.md).
+The package includes its own Mozilla CA bundle for certificate verification.
+
 ## `vitagl-shader-link-guard.patch`
 
 An incremental guard for vitaGL's deferred shader compilation. Failed stage

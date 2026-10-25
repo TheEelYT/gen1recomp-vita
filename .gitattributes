@@ -2,3 +2,5 @@
 *.patch -text
 # Shell scripts run under MSYS/bash.
 *.sh text eol=lf
+# Preserve the pinned upstream certificate bundle on Windows checkouts.
+native/cacert.pem text eol=lf

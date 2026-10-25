@@ -10,6 +10,17 @@ import build_game_vpk as pack
 
 
 class PackagingTests(unittest.TestCase):
+    def test_https_bundle_is_packaged_outside_game_love(self):
+        data = BytesIO()
+        with zipfile.ZipFile(data, "w") as archive:
+            pack.write_network_assets(archive)
+        with zipfile.ZipFile(BytesIO(data.getvalue())) as archive:
+            bundle = archive.read("cacert.pem")
+            self.assertEqual(bundle, (pack.HERE / "native/cacert.pem").read_bytes())
+            self.assertGreater(bundle.count(b"-----BEGIN CERTIFICATE-----"), 50)
+            self.assertIn(b"Mozilla", archive.read("CA-LICENSE"))
+            self.assertIn(b"OpenSSL", archive.read("NETWORK-LICENSES.txt"))
+
     def test_new_game_manifests_are_required(self):
         for game in ('emerald', 'ruby', 'sapphire'):
             self.assertIn(f'tools/rom_manifest_{game}.json', pack.REQUIRED)

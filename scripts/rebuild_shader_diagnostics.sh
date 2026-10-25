@@ -121,6 +121,11 @@ verify_allocator "$vitagl_dir/libvitaGL.a"
 touch "$runtime_dir/src/modules/graphics/opengl/Shader.cpp"
 make -C "$runtime_dir" -j"$jobs"
 verify_allocator "$runtime_dir/src/love"
+if [[ "${G1R_HTTP_BUILD:-0}" == 1 ]] && ! arm-vita-eabi-nm --defined-only "$runtime_dir/src/love" |
+    awk '$NF == "curl_easy_perform" { found=1 } END { exit !found }'; then
+  echo "Linked runtime is missing native curl; preserving the previous SELF." >&2
+  exit 1
+fi
 if ! arm-vita-eabi-nm --defined-only "$runtime_dir/src/love" |
     awk '$NF == "_sceKernelExitProcessForUser" { found=1 } END { exit !found }'; then
   echo "Linked runtime is missing the raw process-exit import; preserving the previous SELF." >&2

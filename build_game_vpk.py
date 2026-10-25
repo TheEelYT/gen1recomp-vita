@@ -184,6 +184,18 @@ def build_love(engine, audio_rate, compiled):
     return buf.getvalue(), len(names)
 
 
+def write_network_assets(archive):
+    """Native curl reads this bundle from app0:, outside the mounted LOVE zip."""
+    ca = HERE / "native" / "cacert.pem"
+    license_file = HERE / "native" / "CA-LICENSE"
+    data = ca.read_bytes()
+    if b"-----BEGIN CERTIFICATE-----" not in data:
+        raise SystemExit("native/cacert.pem is not a PEM certificate bundle")
+    archive.writestr("cacert.pem", data)
+    archive.write(license_file, "CA-LICENSE")
+    archive.write(HERE / "native" / "NETWORK-LICENSES.txt", "NETWORK-LICENSES.txt")
+
+
 def engine_commit(engine):
     try:
         return subprocess.run(["git", "-C", str(engine), "rev-parse", "--short", "HEAD"],
@@ -241,6 +253,7 @@ def main():
     vpk = base.BUILD / "gen1recomp-vita.vpk"
     with zipfile.ZipFile(vpk, "w", zipfile.ZIP_DEFLATED) as z:
         z.write(eboot, "eboot.bin")
+        write_network_assets(z)
         z.writestr("sce_sys/param.sfo", base.build_sfo())
         z.writestr("sce_sys/icon0.png", base.indexed_png(icon_src, (128, 128)))
         z.writestr("sce_sys/livearea/contents/bg.png", base.indexed_png(icon_src, (840, 500)))

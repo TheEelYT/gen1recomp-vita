@@ -1,0 +1,35 @@
+diff --git a/src/modules/system/wrap_System.cpp b/src/modules/system/wrap_System.cpp
+--- a/src/modules/system/wrap_System.cpp
++++ b/src/modules/system/wrap_System.cpp
+@@ -22,4 +22,8 @@
+ #include "wrap_System.h"
+ #include "sdl/System.h"
++
++#ifdef __vita__
++#include "vita_http_bridge.h"
++#endif
+
+ namespace love
+@@ -104,4 +108,11 @@
+ static const luaL_Reg functions[] =
+ {
++#ifdef __vita__
++	{ "httpGet", w_vitaHttpGet },
++	{ "httpDownload", w_vitaHttpDownload },
++	{ "httpRequest", w_vitaHttpRequest },
++	{ "httpCancelAll", w_vitaHttpCancelAll },
++	{ "httpResetCancel", w_vitaHttpResetCancel },
++#endif
+ 	{ "getOS", w_getOS },
+ 	{ "getProcessorCount", w_getProcessorCount },
+@@ -132,4 +142,9 @@
+ 	w.types = nullptr;
+
+-	return luax_register_module(L, w);
++	int results = luax_register_module(L, w);
++#ifdef __vita__
++	lua_pushboolean(L, 1);
++	lua_setfield(L, -2, "_vitaHttp");
++#endif
++	return results;
+ }

@@ -4,7 +4,8 @@ Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC
 (https://github.com/bryanthaboi/gen1recomp)
 
 Runs the Gen1Recomp engine on isage's LÖVE 11.4 Vita port
-(https://github.com/isage/love, release `11.4-vita`). No VitaSDK needed.
+(https://github.com/isage/love, release `11.4-vita`). Building the patched native
+runtime requires VitaSDK; Lua payload verification uses Python alone.
 
 **This repository ships no playable artifact, and cannot.** A built VPK
 necessarily contains the engine's Launcher, which its `LICENSE.MD` Additional
@@ -14,6 +15,10 @@ VPK from your own engine checkout. See `docs/upstream-issue-draft.md` for the
 route to an official Vita build.
 
 ## Build
+
+For the existing Vita test setup, the [HTTPS networking build](docs/vita-networking.md)
+adds save-sync requests and mod downloads while retaining the confirmed
+raw-exit shutdown workaround. Networking still needs on-device validation.
 
 Use Python 3.9+ with Pillow and the patched LuaJIT 2.1 runtime described in
 `TOOLCHAIN.md`. From the Windows checkouts:

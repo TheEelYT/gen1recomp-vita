@@ -1,5 +1,10 @@
 # Raw process exit after the audio-worker shutdown crash
 
+**Device result, 2026-10-25:** the user confirmed that exiting Emerald and
+closing G1R no longer crashed. The matching shutdown log reached
+`native GPU finish complete; raw process exit`. Loading pauses remain open.
+The [networking candidate](vita-networking.md) retains this exit path.
+
 The uploaded `love(5)` ELF matches dump `1792907482`: code maps at `0x81042000`,
 with reported RX size `0x6bbd10`; the ELF link base is `0x81000000`. The ELF has
 `tm_alloclist`, and the dump has the custom allocator's named heap mutexes.

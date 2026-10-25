@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(shutil.which("bash"), "requires bash")
 class GraphicsHeapRebuildTests(unittest.TestCase):
-    def run_build(self, mode="1", bad_stage="", conflict=False, exit_state="patched"):
+    def run_build(self, mode="1", bad_stage="", conflict=False, exit_state="patched", http=False):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         root = Path(tmp.name)
@@ -74,6 +74,9 @@ stage=runtime
 if [[ "$stage" == runtime && "$TEST_BAD_STAGE" != raw-runtime ]]; then
   echo '00005678 T _sceKernelExitProcessForUser'
 fi
+if [[ "$stage" == runtime && "$TEST_BAD_STAGE" != http-runtime ]]; then
+  echo '00006789 T curl_easy_perform'
+fi
 if [[ "$TEST_BAD_STAGE" == "mixed-$stage" ]]; then
   echo '00001234 b tm_alloclist'
   echo '00005678 b mempool_mspace'
@@ -96,7 +99,7 @@ printf 'rebuilt SELF\n' > "${@: -1}"
         env = {**os.environ, "VITASDK": str(sdk), "G1R_CUSTOM_HEAP": mode,
                "TEST_LOG": str(log), "TEST_BAD_STAGE": bad_stage,
                "TEST_RUNTIME": str(runtime), "TEST_CONFLICT": str(int(conflict)),
-               "TEST_EXIT_STATE": exit_state}
+               "TEST_EXIT_STATE": exit_state, "G1R_HTTP_BUILD": "1" if http else "0"}
         result = subprocess.run(["bash", str(script), str(vita), str(runtime)],
                                 env=env, text=True, capture_output=True)
         commands = log.read_text() if log.exists() else ""
@@ -179,6 +182,13 @@ printf 'rebuilt SELF\n' > "${@: -1}"
                 self.assertEqual(result.returncode, 0, result.stderr)
                 apply = f"git -C {runtime} apply {port / 'patches' / patch}"
                 self.assertIn(apply + "\n", calls)
+
+    def test_network_build_requires_curl_in_linked_runtime_before_self(self):
+        result, calls, _, _, runtime = self.run_build(http=True, bad_stage="http-runtime")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing native curl", result.stderr)
+        self.assertNotIn("elf-create", calls)
+        self.assertEqual((runtime / "love.self").read_text(), "original SELF")
 
 
 if __name__ == "__main__":
