@@ -1,4 +1,4 @@
-# Vita HTTPS candidate: save sync and mod downloads
+# Vita HTTPS: save sync and mod downloads
 
 The raw process-exit build was confirmed on hardware on 2026-10-25: returning
 from Emerald and closing G1R both completed without a crash. The supplied
@@ -6,6 +6,11 @@ shutdown log ends with `native GPU finish complete; raw process exit`.
 This networking candidate retains that exit path, the custom graphics heap,
 the existing configured runtime heap, and engine image/audio settings.
 Loading pauses and shader compilation failures remain open.
+
+**Device confirmation, 2026-10-25:** the user successfully downloaded a mod
+and used save sync with engine `01970377` and packager `1e72d30`. This establishes
+that the native HTTPS build works for both flows on the Vita. Interrupted
+transfers and Wi-Fi reconnect behavior still need separate device checks.
 
 ## Update and build
 
@@ -129,5 +134,5 @@ The engine's new Vita integration test passes 24 checks, and existing host
 HTTP, platform and sync suites pass. The broader engine group retains three
 baseline/environment failures: missing `javac`, an NX quit fixture missing its
 VitaShutdown stub, and an NX worker fixture missing `love.data`. The latter two
-were reproduced with the unchanged engine sources. A complete Vita SDK build
-and on-device networking validation remain to be performed on the Windows setup.
+were reproduced with the unchanged engine sources. The subsequent Windows
+build and successful Vita mod-download/save-sync tests are recorded above.

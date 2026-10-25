@@ -18,7 +18,8 @@ route to an official Vita build.
 
 For the existing Vita test setup, the [HTTPS networking build](docs/vita-networking.md)
 adds save-sync requests and mod downloads while retaining the confirmed
-raw-exit shutdown workaround. Networking still needs on-device validation.
+raw-exit shutdown workaround. Mod downloads and save sync were confirmed on
+the Vita on 2026-10-25.
 
 Use Python 3.9+ with Pillow and the patched LuaJIT 2.1 runtime described in
 `TOOLCHAIN.md`. From the Windows checkouts:
