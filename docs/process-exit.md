@@ -8,6 +8,10 @@ The shutdown breadcrumb stops before explicit window closure completes.
 Moving graphics teardown ahead of `lua_close` therefore did not fix it.
 The origin of the invalid free remains unresolved.
 
+The newer `1792898060` dump reaches texture deletion during ordinary Lua GC,
+where this process-exit workaround does not apply. See the
+[graphics-heap investigation and native candidate](graphics-heap.md).
+
 `love-vita-process-exit.patch` is an incremental **exit workaround**. G1R sets
 `G1R_VITA_SHUTDOWN_READY` only after its application shutdown hooks complete.
 When the boot coroutine then returns a real quit, native main waits for GPU

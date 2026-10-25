@@ -24,6 +24,11 @@ the process without running the crashing graphics finalizers. This does not
 repair the underlying invalid free. See [the evidence and rebuild steps](../docs/process-exit.md).
 The existing rebuild helper applies both incremental patches.
 
+The later field crash also reaches texture deletion during ordinary Lua GC.
+See [the graphics-heap candidate](../docs/graphics-heap.md) for the matching
+`love(4)` trace and the opt-in rebuild with vitaGL's supported custom allocator.
+This uses a build flag and adds no further native source patch.
+
 ## `luajit-vita-psp2.patch`
 
 Applies to **SonicMastr/LuaJIT-Vita branch `v2.1`**, commit
