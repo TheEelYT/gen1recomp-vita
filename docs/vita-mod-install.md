@@ -21,7 +21,7 @@ hash check still reads the archive once before any installed files are changed.
 Temporary hash strings are collected before extraction.
 
 Preparation counts files cooperatively. Copying also yields between assets,
-with a pump budget of roughly 6 ms or eight yields per launcher update. One
+with a pump budget of roughly 32 ms or 64 yields per launcher update. One
 individual file read, cache compression, or write can still exceed that budget.
 The existing compressed `.rgba` cache representation is preserved.
 
@@ -36,6 +36,31 @@ The failed archive remains available in the application's save directory.
 `ux0:/data/g1r-mod-install.txt` records bounded progress and the terminal result.
 This candidate needs a device retry to determine whether the asset failure is
 resolved or to obtain its underlying error.
+
+## Slow-install follow-up
+
+The user subsequently reported continued progress at about 2 FPS, reaching
+roughly 5,200 of 7,849 files and 270 MB processed after more than 15 minutes.
+This confirms progress beyond the earlier failure, but does not yet confirm
+successful completion. The MiB counter measures cumulative uncompressed input
+processed, not live RAM usage or the compressed size written to storage.
+
+The first cooperative build limited each update to 6 ms/eight yields and still
+redrew the complete cartridge/save screen behind the progress overlay. The
+performance candidate uses the larger bounded batch above and a Vita-only
+progress view that skips hidden cartridge/video/panel rendering and video
+updates during installation. Native shutdown and networking remain unchanged.
+
+Vita mod texture writes explicitly select zlib level 1 rather than the ordinary
+level 6, preserving the existing cache format and default compression behavior
+elsewhere. Lower compression can produce larger stored files. Per-file GC
+work is retained. The diagnostic log now records cumulative elapsed, ZIP-read,
+compression/write, GC and pump timings to distinguish copy costs from time
+between copy slices. A Vita speed comparison remains pending.
+
+Let an already-running installation finish. This performance update is for
+subsequent installs; do not interrupt or repeat an otherwise successful HnS
+install just to obtain a benchmark.
 
 The shared cache prefix is restored at every yield and on failure. A new
 manifest is published after the payload copy, so an interrupted copy cannot
@@ -66,7 +91,8 @@ G1R normally. If extraction fails again, retain the exact new message and
 
 ## Checks
 
-Host tests exercise cooperative preparation/copy progress, disk mounting without
+Host tests exercise the lightweight progress view, bounded larger batches,
+fast/default compression compatibility, cooperative preparation/copy progress, disk mounting without
 an archive FileData, compressed texture round-trips, retry, detailed read errors,
 short reads, cleanup after exceptions, rollback, cache-prefix restoration,
 manifest publication, interrupted-update baserom recovery, and the cart hash
