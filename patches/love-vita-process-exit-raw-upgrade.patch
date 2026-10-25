@@ -1,0 +1,23 @@
+diff --git a/src/love.cpp b/src/love.cpp
+--- a/src/love.cpp
++++ b/src/love.cpp
+@@ -27,4 +27,6 @@
+ #include <psp2/kernel/processmgr.h>
+ #include <vitaGL.h>
++// Older VitaSDK headers omit this raw export, but their Processmgr stub has it.
++extern "C" __attribute__((noreturn)) int _sceKernelExitProcessForUser(int status);
+ #endif
+
+@@ -309,9 +311,10 @@
+ 		if (shutdown_log)
+ 		{
+-			fputs("native GPU finish complete; exiting process\n", shutdown_log);
++			fputs("native GPU finish complete; raw process exit\n", shutdown_log);
+ 			fclose(shutdown_log);
+ 		}
+ 		fflush(NULL);
+-		sceKernelExitProcess(retval);
++		// G1R_RAW_PROCESS_EXIT: bypass registered C-runtime exit trampolines.
++		_sceKernelExitProcessForUser(retval);
+ 	}
+ 	// G1R_PROCESS_EXIT_END

@@ -23,7 +23,7 @@ class ProcessExitTests(unittest.TestCase):
 #include <setjmp.h>
 #include <string.h>
 enum { DONE_QUIT, DONE_RESTART };
-int ready, finishes, finalized, exit_status, pops;
+int ready, finishes, finalized, exit_status, pops, raw_exits, wrapper_exits;
 jmp_buf exited;
 void lua_getglobal(void *L, const char *name) {
     (void)L; assert(strcmp(name, "G1R_VITA_SHUTDOWN_READY") == 0);
@@ -31,7 +31,12 @@ void lua_getglobal(void *L, const char *name) {
 int lua_toboolean(void *L, int index) { (void)L; assert(index == -1); return ready; }
 void lua_pop(void *L, int n) { (void)L; assert(n == 1); pops++; }
 void glFinish(void) { finishes++; }
-void sceKernelExitProcess(int status) { exit_status = status; longjmp(exited, 1); }
+void sceKernelExitProcess(int status) {
+    wrapper_exits++; finalized++; exit_status = status; longjmp(exited, 1);
+}
+int _sceKernelExitProcessForUser(int status) {
+    raw_exits++; exit_status = status; longjmp(exited, 1);
+}
 FILE *test_fopen(const char *path, const char *mode) {
     assert(strcmp(path, "ux0:data/g1r-shutdown.txt") == 0);
     assert(strcmp(mode, "a") == 0);
@@ -50,6 +55,10 @@ int main(void) {
     assert(finalized == 2 && finishes == 0);
     if (!setjmp(exited)) { teardown(DONE_QUIT, 7); assert(0); }
     assert(exit_status == 7 && finishes == 1 && finalized == 2 && pops == 3);
+    assert(raw_exits == 1 && wrapper_exits == 0);
+    if (!setjmp(exited)) { teardown(DONE_QUIT, -3); assert(0); }
+    assert(exit_status == -3 && raw_exits == 2 && wrapper_exits == 0);
+    assert(finishes == 2 && finalized == 2 && pops == 4);
     return 0;
 }
 '''.replace("@GUARD@", guard)

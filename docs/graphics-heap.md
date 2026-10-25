@@ -1,5 +1,11 @@
 # Graphics heap candidate after the field crash
 
+The subsequent dump confirms this allocator was active and identifies a
+different, audio-worker fault during process cleanup. The current next step is
+the [raw process-exit candidate](raw-process-exit.md), with this allocator kept
+enabled. The latest helper backs up the current runtime under
+`baselines/before-raw-process-exit` before upgrading the exit patch.
+
 The October 24 dump `psp2core-1792898060` can now be symbolized with the uploaded
 `love(4)` ELF. The main thread faults in SceLibKernel at `0xe0011a8c`, accessing
 address `0x4`. Its app code is mapped at `0x8100c000`; subtract `0xc000` to map

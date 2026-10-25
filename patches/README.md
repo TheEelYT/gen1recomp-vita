@@ -24,6 +24,13 @@ the process without running the crashing graphics finalizers. This does not
 repair the underlying invalid free. See [the evidence and rebuild steps](../docs/process-exit.md).
 The existing rebuild helper applies both incremental patches.
 
+The current version calls `_sceKernelExitProcessForUser`, the raw process
+export, after the earlier high-level call still reached runtime teardown.
+`love-vita-process-exit-raw-upgrade.patch` upgrades a runtime that already has
+the earlier workaround. The helper selects the applicable patch, checks the
+SDK stub, and adds its library without replacing the runtime's existing link
+settings. See [the matching audio-worker dump and rebuild](../docs/raw-process-exit.md).
+
 The later field crash also reaches texture deletion during ordinary Lua GC.
 See [the graphics-heap candidate](../docs/graphics-heap.md) for the matching
 `love(4)` trace and the opt-in rebuild with vitaGL's supported custom allocator.

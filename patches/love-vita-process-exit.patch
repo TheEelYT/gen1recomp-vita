@@ -1,22 +1,21 @@
 diff --git a/src/love.cpp b/src/love.cpp
 --- a/src/love.cpp
 +++ b/src/love.cpp
-@@ -21,6 +21,11 @@
- #include "common/version.h"
- #include "common/runtime.h"
- #include "modules/love/love.h"
+@@ -24,4 +24,11 @@
  #include <SDL.h>
- 
+
 +#ifdef __vita__
 +#include <psp2/kernel/processmgr.h>
 +#include <vitaGL.h>
++// Older VitaSDK headers omit this raw export, but their Processmgr stub has it.
++extern "C" __attribute__((noreturn)) int _sceKernelExitProcessForUser(int status);
 +#endif
 +
  #ifdef LOVE_BUILD_EXE
-@@ -286,6 +291,32 @@
- 	if (lua_isnumber(L, -1))
+
+@@ -287,3 +294,30 @@
  		retval = (int) lua_tonumber(L, -1);
- 
+
 +#ifdef __vita__
 +	// G1R_PROCESS_EXIT_BEGIN
 +	// G1R sets this only after a real app quit and its worker shutdown hooks.
@@ -34,15 +33,14 @@ diff --git a/src/love.cpp b/src/love.cpp
 +		glFinish();
 +		if (shutdown_log)
 +		{
-+			fputs("native GPU finish complete; exiting process\n", shutdown_log);
++			fputs("native GPU finish complete; raw process exit\n", shutdown_log);
 +			fclose(shutdown_log);
 +		}
 +		fflush(NULL);
-+		sceKernelExitProcess(retval);
++		// G1R_RAW_PROCESS_EXIT: bypass registered C-runtime exit trampolines.
++		_sceKernelExitProcessForUser(retval);
 +	}
 +	// G1R_PROCESS_EXIT_END
 +#endif
 +
  	lua_close(L);
- 
- #if (defined(LOVE_LEGENDARY_APP_ARGV_HACK) || defined(__vita__)) && !defined(LOVE_IOS)

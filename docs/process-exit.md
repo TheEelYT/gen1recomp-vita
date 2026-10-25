@@ -1,5 +1,11 @@
 # Vita application close workaround
 
+The latest candidate replaces the high-level exit call with the raw process
+export after dump `1792907482` showed an audio worker executing during runtime
+teardown. Follow [the raw-exit instructions](raw-process-exit.md), retaining
+`G1R_CUSTOM_HEAP=1` for the next device test. The trace below describes the
+original reason for adding a process-exit workaround.
+
 The October 24 dump `psp2core-1792880736` matches the uploaded `love(3)` ELF.
 Its main thread faults in SceLibKernel during texture deletion:
 `Window::close` → `Graphics::unSetMode` → `Volatile::unloadAll` →
